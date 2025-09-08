@@ -1,0 +1,166 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+/// EX: Dynamic ListView – Order Tracking Page
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
+      home: OrderListScreen(),
+    );
+  }
+}
+
+/// Simple Order model
+class Order {
+  final String orderId;
+  final String customerName;
+  final String status;
+  final double amount;
+  final String deliveryDate;
+
+  Order({
+    required this.orderId,
+    required this.customerName,
+    required this.status,
+    required this.amount,
+    required this.deliveryDate,
+  });
+}
+
+/// Main screen with ListView.builder
+class OrderListScreen extends StatelessWidget {
+  OrderListScreen({super.key});
+
+  final List<Order> orders = [
+    Order(
+      orderId: "ORD12345",
+      customerName: "Alice Johnson",
+      status: "Shipped",
+      amount: 2500.75,
+      deliveryDate: "2025-09-03",
+    ),
+    Order(
+      orderId: "ORD12346",
+      customerName: "Bob Smith",
+      status: "Delivered",
+      amount: 1500.00,
+      deliveryDate: "2025-08-29",
+    ),
+    Order(
+      orderId: "ORD12347",
+      customerName: "Charlie Brown",
+      status: "Pending",
+      amount: 4200.50,
+      deliveryDate: "2025-09-06",
+    ),
+    Order(
+      orderId: "ORD12348",
+      customerName: "David Lee",
+      status: "Cancelled",
+      amount: 999.99,
+      deliveryDate: "2025-08-30",
+    ),
+    Order(
+      orderId: "ORD12349",
+      customerName: "Emma Davis",
+      status: "Shipped",
+      amount: 3100.25,
+      deliveryDate: "2025-09-04",
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Order Tracking"),
+        backgroundColor: scheme.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: ListView.builder(
+        itemCount: orders.length,
+        itemBuilder: (context, index) {
+          final order = orders[index];
+          return Column(
+            children: [
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: scheme.primaryContainer,
+                  child: const Icon(Icons.shopping_bag, color: Colors.white),
+                ),
+                title: Text(order.orderId,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  "${order.customerName}\n"
+                  "Status: ${order.status} • Delivery: ${order.deliveryDate}",
+                ),
+                isThreeLine: true,
+                trailing: Text(
+                  "₹${order.amount.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.green),
+                ),
+                onTap: () {
+                  // Show Order Details
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Order Details"),
+                      content: Text(
+                        "Order ID: ${order.orderId}\n"
+                        "Customer: ${order.customerName}\n"
+                        "Status: ${order.status}\n"
+                        "Amount: ₹${order.amount}\n"
+                        "Delivery Date: ${order.deliveryDate}",
+                      ),
+                      actions: [
+                        TextButton(
+                          child: const Text("OK"),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        if (order.status == "Pending")
+                          TextButton(
+                            child: const Text("Cancel Order"),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        "Order ${order.orderId} cancelled!")),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  );
+                },
+                onLongPress: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text('Order ${order.orderId} long pressed!')),
+                  );
+                },
+              ),
+              const Divider(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
