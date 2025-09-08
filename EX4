@@ -1,0 +1,190 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+
+/// Order Tracking App
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking App',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+/// Order model
+class Order {
+  final String orderId;
+  final String product;
+  final String status;
+
+  const Order({required this.orderId, required this.product, required this.status});
+}
+
+/// Home Page with list of orders
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  final List<Order> orders = const [
+    Order(orderId: "ORD123", product: "Laptop", status: "Shipped"),
+    Order(orderId: "ORD124", product: "Smartphone", status: "Out for Delivery"),
+    Order(orderId: "ORD125", product: "Headphones", status: "Delivered"),
+    Order(orderId: "ORD126", product: "Smartwatch", status: "Processing"),
+    Order(orderId: "ORD127", product: "Camera", status: "Pending"),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Order Tracking App"),
+        backgroundColor: scheme.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Your Orders",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: ListView.builder(
+                itemCount: orders.length,
+                itemBuilder: (context, index) {
+                  final order = orders[index];
+                  return Card(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: const Icon(Icons.shopping_bag, color: Colors.deepPurple),
+                      title: Text("Order #${order.orderId}"),
+                      subtitle: Text("${order.product}\nStatus: ${order.status}"),
+                      isThreeLine: true,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 12),
+            Center(
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => OrderTrackingForm(orders: orders)),
+                  );
+                },
+                icon: const Icon(Icons.search),
+                label: const Text("Track Order"),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// StatefulWidget: Order Tracking Form
+class OrderTrackingForm extends StatefulWidget {
+  final List<Order> orders;
+  const OrderTrackingForm({super.key, required this.orders});
+
+  @override
+  State<OrderTrackingForm> createState() => _OrderTrackingFormState();
+}
+
+class _OrderTrackingFormState extends State<OrderTrackingForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _orderIdController = TextEditingController();
+
+  String _trackingMessage = "";
+
+  void _trackOrder() {
+    if (_formKey.currentState!.validate()) {
+      final orderId = _orderIdController.text.trim();
+      final order = widget.orders
+          .firstWhere((o) => o.orderId == orderId, orElse: () => Order(orderId: "", product: "", status: ""));
+
+      setState(() {
+        if (order.orderId.isEmpty) {
+          _trackingMessage = "No order found with ID: $orderId";
+        } else {
+          _trackingMessage =
+              "Order #${order.orderId}\nProduct: ${order.product}\nCurrent Status: ${order.status}";
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Tracking Order: $orderId")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Track Your Order"),
+        backgroundColor: scheme.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            children: [
+              TextFormField(
+                controller: _orderIdController,
+                decoration: const InputDecoration(
+                  labelText: "Enter Order ID",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) =>
+                    (value == null || value.isEmpty) ? "Enter your Order ID" : null,
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: _trackOrder,
+                child: const Text("Track Order"),
+              ),
+              const SizedBox(height: 20),
+              if (_trackingMessage.isNotEmpty)
+                Center(
+                  child: Text(
+                    _trackingMessage,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: scheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
