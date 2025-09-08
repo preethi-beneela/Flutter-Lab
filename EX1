@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const MyApp());
+}
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+      ),
+      home: const OrderTrackingPage(title: 'Order Tracking Page'),
+    );
+  }
+}
+
+class OrderTrackingPage extends StatefulWidget {
+  const OrderTrackingPage({super.key, required this.title});
+  final String title;
+
+  @override
+  State<OrderTrackingPage> createState() => _OrderTrackingPageState();
+}
+
+class _OrderTrackingPageState extends State<OrderTrackingPage> {
+  int _currentStep = 0;
+
+  final List<String> _steps = [
+    'Order Placed',
+    'Processing',
+    'Shipped',
+    'Out for Delivery',
+    'Delivered'
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(widget.title),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Card(
+              elevation: 4,
+              child: ListTile(
+                title: const Text("Order ID: #12345"),
+                subtitle: const Text("Estimated Delivery: Aug 15, 2025"),
+                trailing: const Icon(Icons.local_shipping, color: Colors.teal),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: Stepper(
+                currentStep: _currentStep,
+                steps: _steps
+                    .map((step) => Step(
+                          title: Text(step),
+                          content: const SizedBox.shrink(),
+                          isActive: _steps.indexOf(step) <= _currentStep,
+                          state: _steps.indexOf(step) < _currentStep
+                              ? StepState.complete
+                              : StepState.indexed,
+                        ))
+                    .toList(),
+                onStepContinue: () {
+                  if (_currentStep < _steps.length - 1) {
+                    setState(() {
+                      _currentStep++;
+                    });
+                  }
+                },
+                onStepCancel: () {
+                  if (_currentStep > 0) {
+                    setState(() {
+                      _currentStep--;
+                    });
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
