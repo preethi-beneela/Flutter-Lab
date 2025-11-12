@@ -1,0 +1,210 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking Page',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: const OrderTrackingScreen(),
+    );
+  }
+}
+
+class OrderTrackingScreen extends StatefulWidget {
+  const OrderTrackingScreen({super.key});
+
+  @override
+  State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
+}
+
+class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+  final TextEditingController _orderIdController = TextEditingController();
+  final TextEditingController _statusController = TextEditingController();
+  final TextEditingController _deliveryDateController = TextEditingController();
+
+  String? _currentOrderId;
+  bool _orderFound = false;
+  Map<String, dynamic>? _currentOrder;
+
+  // 🔹 Function to search order by ID
+  Future<void> _searchOrder() async {
+    String orderId = _orderIdController.text.trim();
+    if (orderId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an Order ID')),
+      );
+      return;
+    }
+
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('orders')
+          .where('orderId', isEqualTo: orderId)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        var order = querySnapshot.docs.first;
+        setState(() {
+          _currentOrderId = order.id;
+          _currentOrder = order.data() as Map<String, dynamic>;
+          _statusController.text = _currentOrder!['status'];
+          _deliveryDateController.text = _currentOrder!['deliveryDate'];
+          _orderFound = true;
+        });
+      } else {
+        setState(() {
+          _orderFound = false;
+          _currentOrderId = null;
+          _currentOrder = null;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Order not found')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
+
+  // 🔹 Function to update order details
+  Future<void> _updateOrder() async {
+    if (!_orderFound || _currentOrderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please search for an order first')),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(_currentOrderId)
+          .update({
+        'status': _statusController.text,
+        'deliveryDate': _deliveryDateController.text,
+      });
+
+      setState(() {
+        _currentOrder = {
+          'orderId': _orderIdController.text,
+          'status': _statusController.text,
+          'deliveryDate': _deliveryDateController.text,
+        };
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order updated successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating order: ${e.toString()}')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Order Tracking Page'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _orderIdController,
+              decoration: const InputDecoration(
+                labelText: 'Enter Order ID',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _searchOrder,
+              child: const Text('Search Order'),
+            ),
+            if (_orderFound) ...[
+              const SizedBox(height: 24),
+              TextField(
+                controller: _statusController,
+                decoration: const InputDecoration(
+                  labelText: 'Order Status',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _deliveryDateController,
+                decoration: const InputDecoration(
+                  labelText: 'Delivery Date',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _updateOrder,
+                child: const Text('Update Order'),
+              ),
+            ],
+            if (_currentOrder != null) ...[
+              const SizedBox(height: 32),
+              const Divider(),
+              const Text(
+                'Current Order Information',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Order ID: ${_currentOrder!['orderId']}'),
+                      const SizedBox(height: 8),
+                      Text('Status: ${_currentOrder!['status']}'),
+                      const SizedBox(height: 8),
+                      Text('Delivery Date: ${_currentOrder!['deliveryDate']}'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _orderIdController.dispose();
+    _statusController.dispose();
+    _deliveryDateController.dispose();
+    super.dispose();
+  }
+}
