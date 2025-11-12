@@ -1,0 +1,272 @@
+import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+
+void main() {
+  runApp(MaterialApp(
+    debugShowCheckedModeBanner: false,
+    title: "Order Tracking Page",
+    home: OrderTrackingPage(),
+  ));
+}
+
+// ---------------- ORDER MODEL ----------------
+class Order {
+  int? id;
+  String orderId;
+  String customerName;
+  String status;
+
+  Order({
+    this.id,
+    required this.orderId,
+    required this.customerName,
+    required this.status,
+  });
+
+  factory Order.fromRow(Map<String, dynamic> row) {
+    return Order(
+      id: row['id'],
+      orderId: row['orderId'],
+      customerName: row['customerName'],
+      status: row['status'],
+    );
+  }
+}
+
+// ---------------- DATABASE HELPER ----------------
+class DatabaseHelper {
+  static Database? _database;
+  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+  DatabaseHelper._privateConstructor();
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    Directory dir = await getApplicationDocumentsDirectory();
+    String path = join(dir.path, 'orders.db');
+
+    _database = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        String sql = '''
+          CREATE TABLE orders(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            orderId TEXT,
+            customerName TEXT,
+            status TEXT
+          )
+        ''';
+        await db.execute(sql);
+      },
+    );
+    return _database!;
+  }
+
+  Future<int> insertOrder(Order order) async {
+    Database db = await instance.database;
+    return await db.insert('orders', {
+      'orderId': order.orderId,
+      'customerName': order.customerName,
+      'status': order.status,
+    });
+  }
+
+  Future<List<Order>> readAllOrders() async {
+    Database db = await instance.database;
+    final records = await db.query("orders");
+    return records.map((record) => Order.fromRow(record)).toList();
+  }
+}
+
+// ---------------- MAIN UI ----------------
+class OrderTrackingPage extends StatefulWidget {
+  const OrderTrackingPage({super.key});
+
+  @override
+  State<OrderTrackingPage> createState() => _OrderTrackingPageState();
+}
+
+class _OrderTrackingPageState extends State<OrderTrackingPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _orderIdController = TextEditingController();
+  final _customerNameController = TextEditingController();
+  final _statusController = TextEditingController();
+  final _searchController = TextEditingController();
+
+  List<Order> _orders = [];
+  List<Order> _filteredOrders = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _showAllOrders();
+  }
+
+  void _showAllOrders() async {
+    final orders = await DatabaseHelper.instance.readAllOrders();
+    setState(() {
+      _orders = orders;
+      _filteredOrders = orders;
+    });
+  }
+
+  void _filterOrders(String query) {
+    final filtered = _orders
+        .where((order) =>
+            order.customerName.toLowerCase().contains(query.toLowerCase()) ||
+            order.orderId.toLowerCase().contains(query.toLowerCase()) ||
+            order.status.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+
+    setState(() {
+      _filteredOrders = filtered;
+    });
+  }
+
+  void _saveOrder() async {
+    if (_formKey.currentState!.validate()) {
+      String orderId = _orderIdController.text;
+      String customerName = _customerNameController.text;
+      String status = _statusController.text;
+
+      Order order = Order(
+        orderId: orderId,
+        customerName: customerName,
+        status: status,
+      );
+
+      await DatabaseHelper.instance.insertOrder(order);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Order Saved Successfully")),
+      );
+
+      _orderIdController.clear();
+      _customerNameController.clear();
+      _statusController.clear();
+
+      _showAllOrders();
+    }
+  }
+
+  Color _getColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'delivered':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        title: const Text("Order Tracking Page"),
+        backgroundColor: Colors.red.shade700,
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          children: [
+            TextFormField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                prefixIcon: Icon(Icons.search),
+                labelText: "Search Orders...",
+                border: OutlineInputBorder(),
+              ),
+              onChanged: _filterOrders,
+            ),
+            const SizedBox(height: 20),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _orderIdController,
+                    decoration: const InputDecoration(
+                      labelText: "Enter Order ID",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) =>
+                        value == null || value.isEmpty ? "Enter Order ID!" : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _customerNameController,
+                    decoration: const InputDecoration(
+                      labelText: "Enter Customer Name",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) =>
+                        value == null || value.isEmpty ? "Enter Customer Name!" : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _statusController,
+                    decoration: const InputDecoration(
+                      labelText: "Enter Order Status (Delivered/Pending/Cancelled)",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) =>
+                        value == null || value.isEmpty ? "Enter Status!" : null,
+                  ),
+                  const SizedBox(height: 15),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                    onPressed: _saveOrder,
+                    child: const Text("Save Details"),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _filteredOrders.length,
+              itemBuilder: (context, index) {
+                final order = _filteredOrders[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: _getColor(order.status),
+                      child: Text(
+                        order.customerName[0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    title: Text(
+                      order.customerName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      "Order ID: ${order.orderId}\nStatus: ${order.status}",
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
