@@ -1,0 +1,162 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(OrderTrackingApp());
+}
+
+class OrderTrackingApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking Page',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.purple,
+      ),
+      home: OrderTrackingPage(),
+    );
+  }
+}
+
+class OrderTrackingPage extends StatefulWidget {
+  @override
+  _OrderTrackingPageState createState() => _OrderTrackingPageState();
+}
+
+class _OrderTrackingPageState extends State<OrderTrackingPage> {
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController quantityController = TextEditingController();
+  final TextEditingController productController = TextEditingController();
+
+  List<Map<String, dynamic>> orders = [
+    {'name': 'jam', 'quantity': 4, 'product': 'cheese'},
+    {'name': 'ada', 'quantity': 2, 'product': 'cereals'},
+    {'name': 'hk', 'quantity': 9, 'product': 'jam'},
+    {'name': 'water', 'quantity': 9, 'product': 'cereal'},
+  ];
+
+  void addOrder() {
+    if (nameController.text.isNotEmpty &&
+        quantityController.text.isNotEmpty &&
+        productController.text.isNotEmpty) {
+      setState(() {
+        orders.add({
+          'name': nameController.text,
+          'quantity': int.tryParse(quantityController.text) ?? 0,
+          'product': productController.text,
+        });
+        nameController.clear();
+        quantityController.clear();
+        productController.clear();
+      });
+    }
+  }
+
+  bool isLowStock(int quantity) {
+    return quantity < 5; // less than 5 is considered low stock
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.purple[50],
+      appBar: AppBar(
+        title: Text('Order Tracking Page'),
+        backgroundColor: Colors.purple[300],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Customer Name',
+                border: UnderlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 10),
+            TextField(
+              controller: quantityController,
+              decoration: InputDecoration(
+                labelText: 'Order Quantity',
+                border: UnderlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+            SizedBox(height: 10),
+            TextField(
+              controller: productController,
+              decoration: InputDecoration(
+                labelText: 'Product Name',
+                border: UnderlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: addOrder,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                ),
+                child: Text(
+                  'Save Order',
+                  style: TextStyle(color: Colors.purple[700], fontSize: 16),
+                ),
+              ),
+            ),
+            SizedBox(height: 25),
+            Expanded(
+              child: ListView.builder(
+                itemCount: orders.length,
+                itemBuilder: (context, index) {
+                  final order = orders[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order['name'],
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Order Quantity: ${order['quantity']}, Product: ${order['product']}',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ),
+                        if (isLowStock(order['quantity']))
+                          Text(
+                            'Low Stock!',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
