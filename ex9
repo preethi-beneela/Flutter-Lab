@@ -1,0 +1,132 @@
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking Page',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const OrderTrackingScreen(),
+    );
+  }
+}
+
+class OrderTrackingScreen extends StatefulWidget {
+  const OrderTrackingScreen({super.key});
+
+  @override
+  State<OrderTrackingScreen> createState() => _OrderTrackingScreenState();
+}
+
+class _OrderTrackingScreenState extends State<OrderTrackingScreen> {
+  final TextEditingController _orderIdController = TextEditingController();
+  Map<String, dynamic>? _orderDetails;
+  bool _isLoading = false;
+
+  Future<void> _fetchOrder() async {
+    String orderId = _orderIdController.text.trim();
+
+    if (orderId.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please enter an Order ID')));
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(orderId)
+          .get();
+
+      if (doc.exists) {
+        setState(() {
+          _orderDetails = doc.data() as Map<String, dynamic>;
+        });
+      } else {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Order not found')));
+        setState(() {
+          _orderDetails = null;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Order Tracking Page')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _orderIdController,
+              decoration: const InputDecoration(
+                labelText: 'Enter Order ID',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchOrder,
+              child: const Text('Track Order'),
+            ),
+            const SizedBox(height: 24),
+            if (_isLoading) const CircularProgressIndicator(),
+            if (_orderDetails != null && !_isLoading)
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Order ID: ${_orderIdController.text}',
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text('Product: ${_orderDetails!['productName']}'),
+                      Text('Status: ${_orderDetails!['status']}'),
+                      Text('Expected Delivery: ${_orderDetails!['deliveryDate']}'),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _orderIdController.dispose();
+    super.dispose();
+  }
+}
