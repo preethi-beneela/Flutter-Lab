@@ -1,0 +1,139 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(OrderSearchApp());
+}
+
+class OrderSearchApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Order Tracking Page',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.purple,
+      ),
+      home: OrderSearchPage(),
+    );
+  }
+}
+
+class OrderSearchPage extends StatefulWidget {
+  @override
+  _OrderSearchPageState createState() => _OrderSearchPageState();
+}
+
+class _OrderSearchPageState extends State<OrderSearchPage> {
+  final TextEditingController productController = TextEditingController();
+
+  // Sample order data
+  final List<Map<String, dynamic>> orders = [
+    {'product': 'cheese', 'quantity': 4, 'price': 200.0},
+    {'product': 'cereals', 'quantity': 2, 'price': 123.0},
+    {'product': 'jam', 'quantity': 9, 'price': 767.0},
+    {'product': 'water', 'quantity': 9, 'price': 20.0},
+  ];
+
+  Map<String, dynamic>? foundProduct;
+
+  void searchProduct() {
+    String query = productController.text.trim().toLowerCase();
+    setState(() {
+      foundProduct = orders.firstWhere(
+        (product) => product['product'].toString().toLowerCase() == query,
+        orElse: () => {},
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.purple[50],
+      appBar: AppBar(
+        backgroundColor: Colors.purple[300],
+        title: const Text('Order Tracking Page'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: productController,
+              decoration: InputDecoration(
+                labelText: 'Enter Product Name',
+                labelStyle: const TextStyle(color: Colors.purple),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: Colors.purple, width: 2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: searchProduct,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                elevation: 3,
+              ),
+              child: Text(
+                "Search",
+                style: TextStyle(
+                  color: Colors.purple[700],
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            if (foundProduct != null && foundProduct!.isNotEmpty)
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                margin: const EdgeInsets.only(top: 20),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Product Name: ${foundProduct!['product']}",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text("Quantity: ${foundProduct!['quantity']}"),
+                      Text("Price: \$${foundProduct!['price'].toStringAsFixed(2)}"),
+                    ],
+                  ),
+                ),
+              )
+            else if (foundProduct != null)
+              const Padding(
+                padding: EdgeInsets.only(top: 30),
+                child: Text(
+                  "No product found!",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
